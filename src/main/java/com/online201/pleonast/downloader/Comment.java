@@ -3,7 +3,7 @@ package com.online201.pleonast.downloader;
 import org.joda.time.DateTime;
 
 public class Comment {
-	private String text;
+	private String who;
 	private DateTime date;
 	private String comment;
 
@@ -15,8 +15,8 @@ public class Comment {
 		return date;
 	}
 
-	public String getText() {
-		return text;
+	public String getWho() {
+		return who;
 	}
 
 	public void setComment(String comment) {
@@ -27,8 +27,8 @@ public class Comment {
 		this.date = date;
 	}
 
-	public void setText(String text) {
-		this.text = text;
+	public void setWho(String text) {
+		this.who = text;
 	}
 
 }

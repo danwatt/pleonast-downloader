@@ -1,5 +1,7 @@
 package com.online201.pleonast.downloader;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
@@ -42,9 +44,13 @@ public class PleoDownloader {
 			currentPage = client.getPage("http://pleonast.com/users/"+args[0]+"?page="+i);
 			entries.addAll(parseEntries(currentPage));
 		}
+		FileOutputStream fos = new FileOutputStream(new File("/tmp/pleo.zip"));
+		new JekyllZipOutput().writeEntries(entries, fos);
+		fos.close();
 	}
 
 	private static List<Entry> parseEntries(HtmlPage currentPage) {
+		currentPage.normalize();
 		List<Entry> entries = new ArrayList<Entry>();
 		List<HtmlElement> pageEntries = (List<HtmlElement>) currentPage.getByXPath("//div[@class='entry']");
 		for (HtmlElement pageEntry : pageEntries) {
@@ -54,9 +60,11 @@ public class PleoDownloader {
 			body = StringUtils.substringAfter(body, ">");
 			body = StringUtils.substringBeforeLast(body, "<");
 			body = StringUtils.replace(body, "  <br/>\n", "\n");
+			body = body.replaceAll("[\n\r]+","\n");
+			body = body.trim();
+			entry.setBody(body);
 			String date = pageEntry.getElementsByAttribute("div", "class", "byline").get(0).getElementsByTagName("span").get(0).getTextContent().trim();
 			entry.setDate(dateParser.parseDateTime(date.replace("  ", " ")));
-			entry.setBody(body);
 			entry.setComments(parseComments(pageEntry));
 			System.out.println(entry.getDate().toString() +" : " + entry.getTitle()+", " + entry.getComments().size() +" comments");
 			entries.add(entry);
@@ -83,6 +91,7 @@ public class PleoDownloader {
 			Comment c = new Comment();
 			HtmlElement right = pageComment.getElementsByAttribute("div", "class", "right").get(0);
 			HtmlElement body = right.getElementsByAttribute("div", "class", "body").get(0);
+			c.setComment(cleanupCommentBody(body.asXml()));
 			HtmlElement meta = right.getElementsByAttribute("div", "class", "meta").get(0);
 			String who = StringUtils.substringAfterLast(meta.getElementsByTagName("a").get(0).getAttribute("href"),"/");
 			for (DomNode node : meta.getChildren()) {
@@ -91,9 +100,15 @@ public class PleoDownloader {
 					c.setDate(dateParser.parseDateTime(StringUtils.substringAfter(text," ").replace("  ", " ")));
 				}
 			}
-			c.setText(who);
+			c.setWho(who);
 			comments.add(c);
 		}
 		return comments;
+	}
+
+	private static String cleanupCommentBody(String body) {
+		String b = StringUtils.substringAfter(body.replaceAll("<\\/?font.*?>", ""),">");
+		b = StringUtils.substringBeforeLast(b, "<");
+		return b.trim().replaceAll("[\n\r]", "\n# ");
 	}
 }
